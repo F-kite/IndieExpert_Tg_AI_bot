@@ -1,0 +1,51 @@
+services:
+  telegram-bot:
+    build: .
+    container_name: indieexpert-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MONGODB_BOT_URI=${MONGODB_BOT_URI}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      - TELEGRAM_ADMINS_ID=${TELEGRAM_ADMINS_ID}
+      - SUBSCRIPTION_PRICE=${SUBSCRIPTION_PRICE}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_BOT_USERNAME=${MONGO_BOT_USERNAME}
+      - MONGO_BOT_PASSWORD=${MONGO_BOT_PASSWORD}
+      - MONGODB_BOT_URI=${MONGODB_BOT_URI}
+
+    volumes:
+      - mongo_data:/data/db
+      - ./init-mongo:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_BASICAUTH_USERNAME}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_BASICAUTH_PASSWORD}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

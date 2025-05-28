@@ -1,15 +1,15 @@
 AI_PRESETS = {
-    "gpt4o": {
+    "gpt-4o": {
         "name": "GPT-4o",
-        "description": "ChatGPT — это та самая известная модель. Она <b>быстрая</b> и <b>дешевая</b>. Идеально подходит для повседневных задач. Если есть задачи, с которыми она не справляется, попробуйте <b>GPT-4</b>.",
+        "description": "OpenAI выпустили его как своего героя. Быстрый, умный, немного занудливый, но если нужно — может написать вам пьесу Шекспира или решить задачку по физике.",
         "temperature": 0.7,
         "style": "нейтральный",
-        "price_per_1000_input_tokens": 0.0015,
-        "price_per_1000_output_tokens": 0.002,
+        "price_per_1000_input_tokens": 0.005,
+        "price_per_1000_output_tokens": 0.015,
     },
     "yandex_gpt": {
         "name": "Yandex GPT",
-        "description":"Временно отсутсвует",
+        "description": "Наш местный ИИ, который пока ещё растёт. Зато говорит на родном языке и старается быть полезным даже тогда, когда не знает ответ.",
         "temperature": 0.5,
         "style": "формальный",
         "price_per_1000_input_tokens": 0.0015,
@@ -17,18 +17,50 @@ AI_PRESETS = {
     },
     "gigachat": {
         "name": "GigaChat",
-        "description":"Временно отсутсвует",
+        "description": "Сбер прислал своего игрока. Умеет почти всё, но иногда путает «как» и «зачем». Полезен, если ты из России и не хочешь платить долларом.",
         "temperature": 0.8,
         "style": "творческий",
-        "price_per_1000_input_tokens": 0.0015,
-        "price_per_1000_output_tokens": 0.002,
+        "price_per_1000_input_tokens": 0.001,
+        "price_per_1000_output_tokens": 0.0015,
     },
-    "claude_37": {
+    "perplexity": {
+        "name": "Perplexity",
+        "description": "Это тот парень, который всегда спорит с ChatGPT. Он уверен, что прав, а ты должен сам решить, кому верить.",
+        "temperature": 0.9,
+        "style": "аналитический",
+        "price_per_1000_input_tokens": 0.001,
+        "price_per_1000_output_tokens": 0.001,
+    },
+    "deepseek_v3": {
+        "name": "DeepSeek v3",
+        "description": "Китайский гений, который умеет всё, но делает это тихо и без лишнего шума. Хорош для кода и аналитики.",
+        "temperature": 0.6,
+        "style": "аналитический",
+        "price_per_1000_input_tokens": 0.0007,
+        "price_per_1000_output_tokens": 0.0007,
+    },
+    "claude_3_7": {
         "name": "Claude 3.7",
-        "description":"Временно отсутсвует",
+        "description": "Он как учёный в очках: внимательный, аккуратный и чуть занудливый. Лучший выбор для сложных вопросов и дипломных работ.",
         "temperature": 0.3,
         "style": "аналитический",
-        "price_per_1000_input_tokens": 0.0015,
-        "price_per_1000_output_tokens": 0.002,
+        "price_per_1000_input_tokens": 0.003,
+        "price_per_1000_output_tokens": 0.015,
+    },
+    "dalle3": {
+        "name": "DALL·E 3",
+        "description": "Художник, который не ошибается. Нарисует тебе портрет, логотип или просто «что-то страшное». Пишет лучше, чем рисует.",
+        "temperature": 0.7,
+        "style": "вдохновляющий",
+        "price_per_1000_input_tokens": 0.02,
+        "price_per_1000_output_tokens": 0.02,
+    },
+    "midjourney": {
+        "name": "Midjourney",
+        "description": "Тот самый маг, который создаёт картинки из воздуха. Иногда не понимает тебя, но если поймёт — получишь шедевр.",
+        "temperature": 0.8,
+        "style": "вдохновляющий",
+        "price_per_1000_input_tokens": 0.02,
+        "price_per_1000_output_tokens": 0.02,
     }
 }
