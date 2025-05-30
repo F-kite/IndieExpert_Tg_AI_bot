@@ -6,6 +6,7 @@ __pycache__/
 env/
 .env
 logs/ 
+mongo_data/
 
 # Файлы дистрибутивов и артефакты упаковки
 dist/

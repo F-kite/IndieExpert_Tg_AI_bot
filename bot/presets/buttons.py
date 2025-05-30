@@ -1,3 +1,7 @@
+from telebot.types import InlineKeyboardButton
+
+BACK_BUTTON = InlineKeyboardButton("🏠 Главное меню", callback_data="back_to_main")
+
 SIDE_BUTTONS={
     "/start": "🏠 Главное меню",
     "/profile": "👤 Профиль",
@@ -26,3 +30,5 @@ AI_MODELS_BUTTONS = {
     "dalle3": "🖼️ DALL·E 3",
     "midjourney": "🖼️ Midjourney"
 }
+
+
