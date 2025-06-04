@@ -2,7 +2,7 @@ import logging
 import sys
 import os
 
-LOGS_DIR = "../logs"
+LOGS_DIR = "logs"
 LOG_FILE = os.path.join(LOGS_DIR, "app.log")
 os.makedirs(LOGS_DIR, exist_ok=True)
 

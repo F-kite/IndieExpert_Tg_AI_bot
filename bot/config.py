@@ -13,10 +13,20 @@ cfg = SimpleNamespace()
 # Переменные окружения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMINS = [int(x.strip()) for x in os.getenv("TELEGRAM_ADMINS_ID", "").split(",") if x.strip()]
-SUBSCRIPTION_PRICE = int(os.getenv("SUBSCRIPTION_PRICE", 150))
+subscription_price_str = os.getenv("SUBSCRIPTION_PRICE", "150")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
 MONGODB_BOT_URI = os.getenv("MONGODB_BOT_URI")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+# Проверяем, что это действительно число
+if subscription_price_str.strip() == "":
+    SUBSCRIPTION_PRICE = 150
+else:
+    try:
+        SUBSCRIPTION_PRICE = int(subscription_price_str)
+    except ValueError:
+        raise ValueError("SUBSCRIPTION_PRICE должен быть целым числом")
 
 # Текста
 WELCOME_MESSAGE = messages.WELCOME_MESSAGE

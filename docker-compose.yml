@@ -11,6 +11,8 @@ services:
       - SUBSCRIPTION_PRICE=${SUBSCRIPTION_PRICE}
     depends_on:
       - mongo
+    volumes:
+      - ./logs:/app/logs
     restart: unless-stopped
 
   mongo:
@@ -29,7 +31,6 @@ services:
     volumes:
       - mongo_data:/data/db
       - ./init-mongo:/docker-entrypoint-initdb.d
-      - ./backups:/backups
     restart: unless-stopped
 
   mongo-express:
