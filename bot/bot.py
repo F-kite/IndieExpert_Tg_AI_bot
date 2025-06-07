@@ -5,10 +5,11 @@ import openai
 from openai import OpenAI
 from bot_init import bot
 from config import *
-from database.client import get_user_info, get_current_prompt, save_query_to_history, ensure_user_exists
+from database.client import get_user_info, get_current_prompt, save_query_to_history, ensure_user_exists, users_collection
 from handlers import callback_handlers, message_handlers
+from utils.keyboards import create_inline_menu
 from utils.logger import get_logger
-from utils.helpers import auto_delete_message
+from utils.helpers import auto_delete_message, format_error_system_message, build_history_messages, escape_markdown_v2
 from utils.limits import check_ai_usage
 
 
@@ -22,7 +23,6 @@ def shutdown_logger():
 
 # Инициализация ИИ
 client_gpt = OpenAI(api_key=OPENAI_API_KEY)
-
 
 # Установка боковой панели кнопок при старте бота
 def setup_bot_commands():
@@ -52,6 +52,7 @@ def checkout(pre_checkout_query):
 @bot.message_handler(func=lambda message: True)
 def cmd_handle_message(message):
     user = message.from_user
+    user_id = user.id
     chat_id = message.chat.id
     user_input = message.text
     ensure_user_exists(user)
@@ -63,51 +64,71 @@ def cmd_handle_message(message):
         return None  # Если не найдено
 
     try:
-        user_data = get_user_info(user.id)
+        user_data = get_user_info(user_id)
         ai_preset = AI_PRESETS.get(user_data["ai_model"], AI_PRESETS["gpt-4o"])
+        ai_role = ROLE_PRESETS.get(user_data["role"], ROLE_PRESETS["default"])
         ai_model = get_key_by_name(ai_preset["name"])
         
-        role_prompt = get_current_prompt(user.id)
+        role_prompt = get_current_prompt(user_id)
         user_prompt = user_input
 
         # Проверяем подписку и лимиты
-        allowed, reason = check_ai_usage(user.id, user_data["ai_model"])
+        allowed, reason = check_ai_usage(user_id, user_data["ai_model"])
         if not allowed:
             msg = bot.send_message(chat_id, reason + ".\n\nС подпиской ограничения на использование ИИ исчезнут")
             auto_delete_message(chat_id, msg.message_id, 3)
             return
-
-        # Реальный вызов gpt-3.5-turbo или gpt-4o
+        
+        # Формирование messages с историей прошлых запросов
+        messages = build_history_messages(user_id, role_prompt, user_prompt, max_history=10)
+        
+        # Вызов gpt
         response = client_gpt.chat.completions.create(
             model=ai_model,
-            messages=[
-                {"role": "system", "content": role_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=ai_preset["temperature"],
-            max_tokens=300,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0
+            messages=messages,
+            temperature=ai_role["temperature"],
+            max_tokens=ai_role["max_tokens"],
+            top_p=ai_role["top_p"],
+            frequency_penalty=ai_role["frequency_penalty"],
+            presence_penalty=ai_role["presence_penalty"]
         )
 
         ai_response = response.choices[0].message.content.strip()
-        save_query_to_history(user.id, user_input, ai_response)
-        bot.send_message(chat_id, ai_response)
+        save_query_to_history(user_id, user_input, ai_response)
+        
+        safe_response = escape_markdown_v2(ai_response)
+
+        bot.send_message(chat_id, safe_response, parse_mode="MarkdownV2")
+
+        #Счетчик исп-я +1
+        users_collection.update_one(
+            {"user_id": user_id},
+            {"$inc": {f"monthly_usage.{ai_model}": 1}}  # Увеличиваем счётчик
+        )
 
     except openai.RateLimitError as e:
-        msg = bot.send_message(chat_id, "❌ Превышен лимит обращений к OpenAI. Подождите немного.")
-        auto_delete_message(chat_id, msg.message_id, 3)
+        msg = bot.send_message(chat_id, "❌ Превышен лимит обращений к OpenAI. Подождите немного.",)
+        auto_delete_message(chat_id, msg.message_id, 5)
         logger.error(f"Rate limit error: {e}")
 
     except openai.APIError as e:
-        msg = bot.send_message(chat_id, "❌ Ошибка при обращении к нейросети.")
-        auto_delete_message(chat_id, msg.message_id, 3)
+        error_message = format_error_system_message(
+            title="Ошибка при обращении",
+            error_text=str(e)
+        )
+        markup = create_inline_menu(SUPPORT_BUTTON)
+        msg = bot.send_message(chat_id, error_message, reply_markup=markup, parse_mode="HTML")
+        auto_delete_message(chat_id, msg.message_id, 60)
         logger.error(f"OpenAI API error: {e}")
 
     except Exception as e:
-        msg = bot.send_message(chat_id, "❌ Неизвестная ошибка при обращении к нейросети.")
-        auto_delete_message(chat_id, msg.message_id, 3)
+        error_message = format_error_system_message(
+            title="Неизвестная ошибка.",
+            error_text=str(e)
+        )
+        markup = create_inline_menu(SUPPORT_BUTTON)
+        msg = bot.send_message(chat_id, error_message, reply_markup=markup, parse_mode="HTML")
+        auto_delete_message(chat_id, msg.message_id, 60)
         logger.error(f"Ошибка: {e}")
 
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from config import AI_PRESETS
+from config import AI_PRESETS, AI_REQUEST_LIMIT
 from database.client import users_collection, get_user_info
 
 def check_ai_usage(user_id, ai_model_key):
@@ -23,7 +23,7 @@ def check_ai_usage(user_id, ai_model_key):
             {"$set": {f"request_limits.{ai_model_key}": model_limit}}
         )
 
-    if model_limit["count"] >= 2:
+    if model_limit["count"] >= AI_REQUEST_LIMIT:
         return False, f"❌ Лимит использования {AI_PRESETS[ai_model_key]['name']} исчерпан"
 
     # Увеличиваем счетчик

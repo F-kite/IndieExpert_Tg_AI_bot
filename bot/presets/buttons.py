@@ -9,7 +9,7 @@ SIDE_BUTTONS={
     "/choose_role": "🎭 Выбрать роль бота",
     "/history": "📖 История запросов",
     "/clear_history": "🗑️ Очистить историю",
-    "/policy": "🔒 Политика конфиденциальности",
+    "/privacy": "🔒 Политика конфиденциальности",
 }
 
 INLINE_BUTTONS = {
@@ -19,6 +19,8 @@ INLINE_BUTTONS = {
     "choose_role": "🎭 Выбор роли",
     "https://t.me/w_ViIl": "💬 Служба поддержки",
 }
+
+SUPPORT_BUTTON = { "https://t.me/w_ViIl": "💬 Служба поддержки"}
 
 AI_MODELS_BUTTONS = {
     "gpt4o": "🧠 GPT-4o",

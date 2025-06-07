@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from config import *
 from database.client import ensure_user_exists, get_user_info, is_user_subscribed, get_user_history, users_collection
 from utils.keyboards import create_inline_menu, create_ai_keyboard, create_role_keyboard, create_payment_keyboard
-from utils.helpers import auto_delete_message
+from utils.helpers import auto_delete_message, extract_russian_text
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -19,6 +19,7 @@ def register_handlers(bot):
 
     @bot.message_handler(commands=["profile"])
     def cmd_send_profile(message: Message):
+        markup = types.InlineKeyboardMarkup()
         user_id = message.from_user.id
         user_profile = get_user_info(user_id)
         is_admin =  ""
@@ -30,20 +31,28 @@ def register_handlers(bot):
             auto_delete_message(message.chat.id, msg.message_id)
             return
         
+        model_name = AI_PRESETS.get(user_profile.get("ai_model", "default"), {}).get("name","Неизвестная модель")
+        role_name = ROLE_PRESETS.get(user_profile.get("role", "default"), {}).get("name", "Неизвестная роль")
+        
         response = f"""
-    👤 Ваш профиль:
+👤 Ваш профиль:
 
-    🔹 Пользователь: {user_profile.get('username')}
-    🔹 Подписка: {"✅" if user_profile.get("is_subscribed", False) else "❌"}
-    🔹 Дата регистрации: {user_profile.get("registered_at").strftime("%Y-%m-%d")}
-    🔹 Текущая модель ИИ: {user_profile.get("ai_model", "не выбрана")}
-    🔹 Текущая роль бота: {ROLE_PRESETS.get(user_profile.get("role", "default"), {}).get("name", "Неизвестная роль")}
+🪪 Пользователь: <code>{user_profile.get('username')}</code>
+💸 Подписка: {"✅" if user_profile.get("is_subscribed", False) else "❌"}
+📅 Дата регистрации: <i>{user_profile.get("registered_at").strftime("%Y-%m-%d")}</i>
+🧠 Текущая модель ИИ: <i>{model_name}</i>
+🎭 Текущая роль бота: <i>{extract_russian_text(role_name)}</i>
                     """
         
         if is_admin:
             response += f"\n{is_admin}"
 
-        bot.send_message(message.chat.id, response)
+        stat_btn= types.InlineKeyboardButton("📊 Статистика", callback_data="user_statistics")
+        back_btn = types.InlineKeyboardButton("🏠 Главное меню", callback_data="back_to_main")
+        markup.add(stat_btn)
+        markup.add(back_btn)
+
+        bot.send_message(message.chat.id, response, reply_markup=markup, parse_mode="HTML")
 
 
     @bot.message_handler(commands=["choose_ai"])
@@ -53,10 +62,10 @@ def register_handlers(bot):
         ensure_user_exists(user)
         
         user_data = get_user_info(user_id)
-        if not user_data.get("is_subscribed", False) and AI_PRESETS[user_data.get("ai_model", "gpt-4o")] != "gpt-4o":
-            msg = bot.send_message(message.chat.id, "🔒 Нужна подписка, чтобы выбрать другую модель")
-            auto_delete_message(message.chat.id, msg.message_id)
-            return
+        # if not user_data.get("is_subscribed", False) and AI_PRESETS[user_data.get("ai_model", "gpt-4o")] != "gpt-4o":
+        #     msg = bot.send_message(message.chat.id, "🔒 Нужна подписка, чтобы выбрать другую модель")
+        #     auto_delete_message(message.chat.id, msg.message_id)
+        #     return
         
         markup = create_ai_keyboard(user_id)
         bot.send_message(message.chat.id, AI_MENU_MESSAGE, reply_markup=markup)
@@ -69,13 +78,13 @@ def register_handlers(bot):
         ensure_user_exists(user)
 
         user_data = get_user_info(user_id)
-        if not user_data.get("is_subscribed", False):
-            msg = bot.send_message(
-                message.chat.id,
-                "🔒 Нужна подписка, чтобы выбрать другую роль"
-            )
-            auto_delete_message(message.chat.id, msg.message_id)
-            return
+        # if not user_data.get("is_subscribed", False):
+        #     msg = bot.send_message(
+        #         message.chat.id,
+        #         "🔒 Нужна подписка, чтобы выбрать другую роль"
+        #     )
+        #     auto_delete_message(message.chat.id, msg.message_id)
+        #     return
 
         markup = create_role_keyboard(user_id)
         bot.send_message(message.chat.id, ROLE_MENU_MESSAGE, reply_markup=markup, parse_mode="Markdown")
@@ -189,14 +198,17 @@ def register_handlers(bot):
     def cmd_send_history(message: Message):
         user_id = message.from_user.id
         history = get_user_history(user_id)
+        logger.info(history)
+        
         if not history:
             msg =bot.send_message(message.chat.id, "История запросов пуста.")
             auto_delete_message(message.chat.id, msg.message_id)
             return
-
-        response = f"{HISTORY_MESSAGE}\n\n"
+        
+        response = f"{HISTORY_MESSAGE}\n"
         for item in history:
-            response += f"\n🔹 {item['query']}\n🤖 {item['response']}\n"
+            formatted_date = item["timestamp"].strftime("%d-%m-%Y %H:%M")  
+            response += f"\n{formatted_date}\n👤 {item['query']}\n🤖 {item['response']}\n"
 
         bot.send_message(message.chat.id, response)
 
@@ -212,7 +224,7 @@ def register_handlers(bot):
         bot.send_message(message.chat.id, CLEAR_DIALOG_MESSAGE, reply_markup=markup)
 
 
-    @bot.message_handler(commands=["policy"])
-    def cmd_send_policy(message: Message):
-        bot.send_message(message.chat.id, POLICY_MESSAGE, parse_mode="Markdown")
+    @bot.message_handler(commands=["privacy"])
+    def cmd_send_privacy(message: Message):
+        bot.send_message(message.chat.id, PRIVACY_MESSAGE, parse_mode="HTML")
 

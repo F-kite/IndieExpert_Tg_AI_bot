@@ -1,6 +1,6 @@
 from telebot import types
 from dotenv import load_dotenv
-from config import SUBSCRIPTION_PRICE, AI_PRESETS, ROLE_PRESETS
+from config import SUBSCRIPTION_PRICE, AI_PRESETS, ROLE_PRESETS, SUPPORT_BUTTON
 from database.client import get_user_info
 from utils.helpers import extract_russian_text
 
@@ -10,6 +10,9 @@ load_dotenv()
 def create_inline_menu(buttons):
     markup = types.InlineKeyboardMarkup()
     buttons_list = list(buttons.items())
+
+    if len(buttons_list) == 0:
+            return markup  # пустой markup, если нет кнопок
 
     # Добавляем первые две кнопки в одной строке
     if len(buttons_list) >= 2:
@@ -27,13 +30,21 @@ def create_inline_menu(buttons):
             btn2 = types.InlineKeyboardButton(second_label, callback_data=second_key)
 
         markup.row(btn1, btn2)
+    
+        # Остальные кнопки по одной
+        for key, label in buttons_list[2:]:
+            if key.startswith("http"):
+                markup.add(types.InlineKeyboardButton(label, url=key))
+            else:
+                markup.add(types.InlineKeyboardButton(label, callback_data=key))
 
-    # Остальные кнопки по одной
-    for key, label in buttons_list[2:]:
+    else:
+        key, label = buttons_list[0]
         if key.startswith("http"):
-            markup.add(types.InlineKeyboardButton(label, url=key))
+            btn = types.InlineKeyboardButton(label, url=key)
         else:
-            markup.add(types.InlineKeyboardButton(label, callback_data=key))
+            btn = types.InlineKeyboardButton(label, callback_data=key)
+        markup.add(btn)
 
     return markup
 
@@ -108,7 +119,6 @@ def create_role_keyboard(user_id):
     markup.add(back_button)
 
     return markup
-
 
 def create_payment_keyboard():
     markup = types.InlineKeyboardMarkup()

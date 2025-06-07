@@ -10,14 +10,18 @@ load_dotenv()
 
 cfg = SimpleNamespace()
 
+token = os.getenv("TELEGRAM_BOT_TOKEN")
+if not token or token.startswith("sk-") or len(token) < 35:
+    raise ValueError("❌ Неверный токен Telegram")
+
 # Переменные окружения
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMINS = [int(x.strip()) for x in os.getenv("TELEGRAM_ADMINS_ID", "").split(",") if x.strip()]
+AI_REQUEST_LIMIT = os.getenv("AI_REQUEST_LIMIT")
 subscription_price_str = os.getenv("SUBSCRIPTION_PRICE", "150")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
 MONGODB_BOT_URI = os.getenv("MONGODB_BOT_URI")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 
 # Проверяем, что это действительно число
 if subscription_price_str.strip() == "":
@@ -35,12 +39,13 @@ ROLE_MENU_MESSAGE = messages.ROLE_MENU_MESSAGE
 SUBSCRIPTION_MESSAGE = messages.SUBSCRIPTION_MESSAGE
 HISTORY_MESSAGE = messages.HISTORY_MESSAGE
 CLEAR_DIALOG_MESSAGE = messages.CLEAR_DIALOG_MESSAGE
-POLICY_MESSAGE = messages.POLICY_MESSAGE
+PRIVACY_MESSAGE = messages.PRIVACY_MESSAGE
 
 # Панель кнопок
 BACK_BUTTON = buttons.BACK_BUTTON
 SIDE_BUTTONS = buttons.SIDE_BUTTONS
 INLINE_BUTTONS = buttons.INLINE_BUTTONS
+SUPPORT_BUTTON = buttons.SUPPORT_BUTTON
 AI_MODELS_BUTTONS = buttons.AI_MODELS_BUTTONS
 
 # Присеты

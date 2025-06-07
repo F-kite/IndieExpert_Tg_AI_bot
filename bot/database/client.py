@@ -94,7 +94,7 @@ def ensure_user_exists(user):
     
 
 def get_user_history(user_id):
-    return list(history_collection.find({"user_id": user_id}, {"_id": 0}))
+    return list(history_collection.find({"user_id": user_id}, {"_id": 0}).sort("timestamp", -1))
 
 
 def save_query_to_history(user_id, query, response):

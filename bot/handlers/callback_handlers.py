@@ -32,6 +32,9 @@ def register_handlers(bot):
         message_id = call.message.message_id
         user_profile = get_user_info(user_id)
         markup = types.InlineKeyboardMarkup()
+        is_admin =  ""
+
+        if user_id in ADMINS : is_admin = "🔆 Царь и бог (администратор)"
 
         if not user_profile:
             # bot.answer_callback_query(call.id, "❌ Профиль не найден.")
@@ -41,33 +44,63 @@ def register_handlers(bot):
         
         model_name = AI_PRESETS.get(user_profile.get("ai_model", "default"), {}).get("name","Неизвестная модель")
         role_name = ROLE_PRESETS.get(user_profile.get("role", "default"), {}).get("name", "Неизвестная роль")
-        
-        text = f"""
+        response = f"""
 👤 Ваш профиль:
 
-🔹 Пользователь: {user_profile.get('username')}
-🔹 Подписка: {"✅" if user_profile.get("is_subscribed", False) else "❌"}
-🔹 Дата регистрации: {user_profile.get("registered_at").strftime("%Y-%m-%d")}
-🔹 Текущая модель ИИ: {model_name}
-🔹 Текущая роль бота: {extract_russian_text(role_name)}
+🪪 Пользователь: <code>{user_profile.get('username')}</code>
+💸 Подписка: {"✅" if user_profile.get("is_subscribed", False) else "❌"}
+📅 Дата регистрации: <i>{user_profile.get("registered_at").strftime("%Y-%m-%d")}</i>
+🧠 Текущая модель ИИ: <i>{model_name}</i>
+🎭 Текущая роль бота: <i>{extract_russian_text(role_name)}</i>
     """
-        
+        if is_admin:
+            response += f"\n{is_admin}"
+
+        stat_btn= types.InlineKeyboardButton("📊 Статистика", callback_data="user_statistics")
         back_btn = types.InlineKeyboardButton("🏠 Главное меню", callback_data="back_to_main")
+        markup.add(stat_btn)
         markup.add(back_btn)
 
-        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=markup)
+        bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=response, reply_markup=markup, parse_mode="HTML")
         bot.answer_callback_query(call.id, "Профиль")
 
+
+    @bot.callback_query_handler(func=lambda call: call.data == "user_statistics")
+    def handle_user_statistics(call):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+        user_id = call.from_user.id
+        user_profile = get_user_info(user_id)
+        markup = types.InlineKeyboardMarkup()
+
+        stat_btn= types.InlineKeyboardButton("👤 Профиль", callback_data="show_profile")
+        back_btn = types.InlineKeyboardButton("🏠 Главное меню", callback_data="back_to_main")
+        markup.add(stat_btn)
+        markup.add(back_btn)
+
+        response = f"📊 Ваша статистика за текущий месяц:\n\n"
+        for model, count in user_profile.get("monthly_usage", {}).items():
+            ai_model = AI_PRESETS.get(model).get("name","Неизвестная модель")
+            response += f"▫️ {ai_model}: <b>{count}</b>\n" 
+
+        bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=response,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        bot.answer_callback_query(call.id, "Статистика запросов")
 
     @bot.callback_query_handler(func=lambda call: call.data == "choose_ai")
     def handle_choose_ai(call):
         chat_id = call.message.chat.id
         user_id = call.from_user.id
-        user_doc = users_collection.find_one({"user_id": user_id})
+        user_data = get_user_info(user_id)
 
-        if not user_doc:
+        if not user_data:
             ensure_user_exists(call.from_user)
-            user_doc = users_collection.find_one({"user_id": user_id})
+            user_data = users_collection.find_one({"user_id": user_id})
 
         markup = create_ai_keyboard(user_id)
         bot.edit_message_text(
