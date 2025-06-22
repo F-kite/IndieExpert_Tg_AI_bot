@@ -49,7 +49,7 @@ async def ensure_user_exists(user):
             "last_seen": now,
             "is_subscribed": False,
             "subscription_start":"",
-            "subscription_end": "",
+            "subscription_end": None,
             "ai_model": "gpt-4o",
             "role": "default",
             "custom_prompt":"",
@@ -65,8 +65,15 @@ async def ensure_user_exists(user):
                 {"$set": {"is_subscribed": True, "subscription_end": None}}  # Без ограничения по времени
             )
         subscription_end = user_doc.get("subscription_end")
+
+	# Если это строка, преобразуем в datetime
+        if isinstance(subscription_end, str):
+            try:
+                subscription_end = datetime.fromisoformat(subscription_end)
+            except ValueError:
+                logger.warning(f"⚠️ Неверный формат даты у пользователя {user_id}: {subscription_end}")
         # Отключение подписки если истек ее срок
-        if subscription_end != None and (now.date() == subscription_end.date()):
+        if subscription_end is not None and (now.date() == subscription_end.date()):
             await users_collection.update_one(
                 {"user_id": user_id},
                 {"$set": {"is_subscribed": False}}
@@ -82,15 +89,15 @@ async def ensure_user_exists(user):
            
         # Сбрасываем лимиты в начале нового месяца
         if user_doc.get("last_month", None) != now.month:
-            await users_collection.update_one(
-                {"user_id": user_id},
-                {
-                    "$set": {
-                        "last_month": now.month,
-                        "monthly_usage": {model_key: 0 for model_key in AI_PRESETS.keys()}
-                    }
-                }
-            )
+           await users_collection.update_one(
+               {"user_id": user_id},
+               {
+                   "$set": {
+                       "last_month": now.month,
+                       "monthly_usage": {model_key: 0 for model_key in AI_PRESETS.keys()}
+                   }
+               }
+           )
            
         # Обновляем дату последнего взаимодействия
         await users_collection.update_one(

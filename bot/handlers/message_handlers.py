@@ -18,9 +18,7 @@ logger = get_logger(__name__)
 
 def register_handlers(bot, user_tasks, ai_handlers):
     @bot.message_handler(commands=["start"])
-    async def cmd_send_welcome(message: Message):
-        logger.info(f"user_id : {message.from_user.id}, chat_id : {message.chat.id}")  
-        
+    async def cmd_send_welcome(message: Message):        
         await ensure_user_exists(message.from_user)
         markup = create_inline_menu(INLINE_BUTTONS)
         await bot.send_message(message.chat.id, WELCOME_MESSAGE, reply_markup=markup)
