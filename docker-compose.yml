@@ -4,12 +4,14 @@ services:
     container_name: indieexpert-bot
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - MONGODB_BOT_URI=${MONGODB_BOT_URI}
       - MONGODB_DB_NAME=${MONGODB_DB_NAME}
       - TELEGRAM_ADMINS_ID=${TELEGRAM_ADMINS_ID}
       - AI_REQUEST_LIMIT=${AI_REQUEST_LIMIT}
       - SUBSCRIPTION_PRICE=${SUBSCRIPTION_PRICE}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     depends_on:
       - mongo
     volumes:

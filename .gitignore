@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 
+collect.py
+all_code.py
+all_data_files.txt
+
 # Файлы конфигурации
 env/
 .env

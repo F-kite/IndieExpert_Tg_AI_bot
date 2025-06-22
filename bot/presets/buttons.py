@@ -8,7 +8,6 @@ SIDE_BUTTONS={
     "/choose_ai": "🧠 Выбрать нейросеть",
     "/choose_role": "🎭 Выбрать роль бота",
     "/history": "📖 История запросов",
-    "/clear_history": "🗑️ Очистить историю",
     "/privacy": "🔒 Политика конфиденциальности",
 }
 
@@ -26,9 +25,9 @@ AI_MODELS_BUTTONS = {
     "gpt4o": "🧠 GPT-4o",
     "yandex_gpt": "🧠 Yandex GPT",
     "gigachat": "🧠 GigaChat",
-    "perplexity": "🧠 Perplexity",
-    "deepseek_v3": "🧠 DeepSeek v3",
-    "claude_3_7": "🧠 Claude 3.7",
+    "sonar": "🧠 Perplexity",
+    "deepseek": "🧠 DeepSeek",
+    "claude": "🧠 Claude 3.7",
     "dalle3": "🖼️ DALL·E 3",
     "midjourney": "🖼️ Midjourney"
 }

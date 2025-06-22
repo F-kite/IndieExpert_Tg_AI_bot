@@ -2,33 +2,44 @@ from telebot import types
 from telebot.types import Message, LabeledPrice
 from datetime import datetime, timedelta
 from config import *
-from database.client import ensure_user_exists, get_user_info, is_user_subscribed, get_user_history, users_collection
+from database.client import *
 from utils.keyboards import create_inline_menu, create_ai_keyboard, create_role_keyboard, create_payment_keyboard
-from utils.helpers import auto_delete_message, extract_russian_text
+from utils.helpers import *
+from utils.history_pages import show_history_page
+from utils.limits_check import check_ai_usage
 from utils.logger import get_logger
+from utils.subscription_checker import check_subscriptions_expiry
+from utils.image_helpers import download_url_image
+
+from handlers.admin_handlers import process_grant_subs_input
+from utils.keyboards import create_admin_keyboard
 
 logger = get_logger(__name__)
 
-def register_handlers(bot):
+def register_handlers(bot, user_tasks, ai_handlers):
     @bot.message_handler(commands=["start"])
-    def cmd_send_welcome(message: Message):
-        ensure_user_exists(message.from_user)
+    async def cmd_send_welcome(message: Message):
+        
+        logger.info(f"user_id : {message.from_user.id}, chat_id : {message.chat.id}")  
+        
+        await ensure_user_exists(message.from_user)
         markup = create_inline_menu(INLINE_BUTTONS)
-        bot.send_message(message.chat.id, WELCOME_MESSAGE, reply_markup=markup)
+        await bot.send_message(message.chat.id, WELCOME_MESSAGE, reply_markup=markup)
 
 
     @bot.message_handler(commands=["profile"])
-    def cmd_send_profile(message: Message):
+    async def cmd_send_profile(message: Message):
         markup = types.InlineKeyboardMarkup()
         user_id = message.from_user.id
-        user_profile = get_user_info(user_id)
+        await ensure_user_exists(message.from_user)
+        user_profile = await get_user_info(user_id)
         is_admin =  ""
 
         if user_id in ADMINS : is_admin = "🔆 Царь и бог (администратор)"
 
         if not user_profile:
-            msg = bot.send_message(message.chat.id, "❌ Профиль не найден.")
-            auto_delete_message(message.chat.id, msg.message_id)
+            msg = await bot.send_message(message.chat.id, "❌ Профиль не найден.")
+            await auto_delete_message(bot, message.chat.id, msg.message_id)
             return
         
         model_name = AI_PRESETS.get(user_profile.get("ai_model", "default"), {}).get("name","Неизвестная модель")
@@ -52,32 +63,32 @@ def register_handlers(bot):
         markup.add(stat_btn)
         markup.add(back_btn)
 
-        bot.send_message(message.chat.id, response, reply_markup=markup, parse_mode="HTML")
+        await bot.send_message(message.chat.id, response, reply_markup=markup, parse_mode="HTML")
 
 
     @bot.message_handler(commands=["choose_ai"])
-    def cmd_choose_ai(message: Message):
+    async def cmd_choose_ai(message: Message):
         user = message.from_user
         user_id = user.id
-        ensure_user_exists(user)
+        await ensure_user_exists(user)
         
-        user_data = get_user_info(user_id)
+        user_data = await get_user_info(user_id)
         # if not user_data.get("is_subscribed", False) and AI_PRESETS[user_data.get("ai_model", "gpt-4o")] != "gpt-4o":
         #     msg = bot.send_message(message.chat.id, "🔒 Нужна подписка, чтобы выбрать другую модель")
         #     auto_delete_message(message.chat.id, msg.message_id)
         #     return
         
-        markup = create_ai_keyboard(user_id)
-        bot.send_message(message.chat.id, AI_MENU_MESSAGE, reply_markup=markup)
+        markup = await create_ai_keyboard(user_id, ai_handlers)
+        await bot.send_message(message.chat.id, AI_MENU_MESSAGE, reply_markup=markup)
 
 
     @bot.message_handler(commands=["choose_role"])
-    def cmd_choose_role(message: Message):
+    async def cmd_choose_role(message: Message):
         user = message.from_user
         user_id = user.id
-        ensure_user_exists(user)
+        await ensure_user_exists(user)
 
-        user_data = get_user_info(user_id)
+        user_data = await get_user_info(user_id)
         # if not user_data.get("is_subscribed", False):
         #     msg = bot.send_message(
         #         message.chat.id,
@@ -86,14 +97,14 @@ def register_handlers(bot):
         #     auto_delete_message(message.chat.id, msg.message_id)
         #     return
 
-        markup = create_role_keyboard(user_id)
-        bot.send_message(message.chat.id, ROLE_MENU_MESSAGE, reply_markup=markup, parse_mode="Markdown")
+        markup = await create_role_keyboard(user_id)
+        await bot.send_message(message.chat.id, ROLE_MENU_MESSAGE, reply_markup=markup, parse_mode="Markdown")
 
 
     @bot.message_handler(commands=["custom_role"])
-    def cmd_custom_role(message: Message):
-        msg =  bot.send_message(message.chat.id, "⚠️ Функция находится в разработке")
-        auto_delete_message(message.chat.id, msg.message_id)
+    async def cmd_custom_role(message: Message):
+        msg = await bot.send_message(message.chat.id, "⚠️ Функция находится в разработке")
+        await auto_delete_message(bot, message.chat.id, msg.message_id)
         return
         user = message.from_user
         ensure_user_exists(user)
@@ -104,7 +115,7 @@ def register_handlers(bot):
             {"$set": {"role": "custom"}}
         )
 
-        bot.send_message(message.chat.id, """
+        await bot.send_message(message.chat.id, """
     ✏️ Введите свой системный промпт.
     Пример:
     "Вы — личный коуч, который помогает людям находить себя и менять жизнь."
@@ -115,18 +126,18 @@ def register_handlers(bot):
 
 
     @bot.message_handler(commands=["subscribe"])
-    def cmd_subscribe(message: Message):
+    async def cmd_subscribe(message: Message):
         user = message.from_user
         user_id = user.id
         chat_id = message.chat.id
-        ensure_user_exists(user)
+        await ensure_user_exists(user)
 
-        if is_user_subscribed(user_id):
-            msg = bot.send_message(
+        if await is_user_subscribed(user_id):
+            msg = await bot.send_message(
                 message.chat.id,
                 "🔆 Вы уже оформили подписку, вторая не принесет новых возможностей"
             )
-            auto_delete_message(message.chat.id, msg.message_id)
+            await auto_delete_message(bot, message.chat.id, msg.message_id)
             return
 
         if user_id in ADMINS:
@@ -134,8 +145,8 @@ def register_handlers(bot):
                 {"user_id": user_id},
                 {"$set": {"is_subscribed": True, "subscription_end": None}}  # Без ограничения по времени
             )
-            msg = bot.send_message(message.chat.id, "👑 Вы — админ. Подписка активна навсегда.")
-            auto_delete_message(message.chat.id, msg.message_id)
+            msg = await bot.send_message(message.chat.id, "👑 Вы — админ. Подписка активна навсегда.")
+            await auto_delete_message(bot, message.chat.id, msg.message_id)
             return
 
         # Генерируем ссылку на покупку через @invoice
@@ -147,7 +158,7 @@ def register_handlers(bot):
         prices = [LabeledPrice(label="Ежемесячная подписка", amount=SUBSCRIPTION_PRICE)]
         # photo_url = "https://example.com/subscription_image.jpg "  # Необязательно
 
-        bot.send_invoice(
+        await bot.send_invoice(
                 chat_id,
                 title=title,
                 description=description,
@@ -163,12 +174,12 @@ def register_handlers(bot):
         
 
     @bot.message_handler(content_types=["successful_payment"])
-    def handle_successful_payment(message: Message):
+    async def handle_successful_payment(message: Message):
         user_id = message.from_user.id
         payment_info = message.successful_payment
         logger.info(f"💰 Пользователь {user_id} оплатил подписку: {payment_info.total_amount} {payment_info.currency}")
 
-        users_collection.update_one(
+        await users_collection.update_one(
             {"user_id": user_id},
             {
                 "$set": {
@@ -178,53 +189,217 @@ def register_handlers(bot):
                 }
             }
         )
-        bot.send_message(message.chat.id, "✅ Вы успешно оформили подписку на 30 дней!")
+        await bot.send_message(message.chat.id, "✅ Вы успешно оформили подписку на 30 дней!")
 
         
     @bot.message_handler(commands=["unsubscribe"])
-    def cmd_unsubscribe(message: Message):
+    async def cmd_unsubscribe(message: Message):
         user = message.from_user
         user_id = user.id
-        ensure_user_exists(user)
+        await ensure_user_exists(user)
         
-        users_collection.update_one(
+        await users_collection.update_one(
             {"user_id": user_id},
             {"$set": {"is_subscribed": False}}
         )
-        bot.send_message(message.chat.id, "❌ Вы отписались от бота.")
+        await bot.send_message(message.chat.id, "❌ Вы отписались от бота.")
 
 
     @bot.message_handler(commands=["history"])
-    def cmd_send_history(message: Message):
+    async def cmd_send_history(message: Message):
         user_id = message.from_user.id
-        history = get_user_history(user_id)
-        logger.info(history)
-        
+        chat_id = message.chat.id
+        history = await get_user_history(user_id)
+        await ensure_user_exists(message.from_user)
+
         if not history:
-            msg =bot.send_message(message.chat.id, "История запросов пуста.")
-            auto_delete_message(message.chat.id, msg.message_id)
+            msg = await bot.send_message(message.chat.id, "История запросов пуста.")
+            await auto_delete_message(bot, message.chat.id, msg.message_id)
             return
         
-        response = f"{HISTORY_MESSAGE}\n"
-        for item in history:
-            formatted_date = item["timestamp"].strftime("%d-%m-%Y %H:%M")  
-            response += f"\n{formatted_date}\n👤 {item['query']}\n🤖 {item['response']}\n"
+        await show_history_page(bot, chat_id, user_id, page_index=0)
+        
+        # response = f"{HISTORY_MESSAGE}\n"
+        # for item in history:
+        #     formatted_date = item["timestamp"].strftime("%d-%m-%Y %H:%M")  
+        #     response += f"\n{formatted_date}\n👤 {item['query']}\n🤖 {item['response']}\n"
 
-        bot.send_message(message.chat.id, response)
-
-
-    @bot.message_handler(commands=["clear_history"])
-    def cmd_confirm_clear_history(message: Message):
-        markup = types.InlineKeyboardMarkup()
-        confirm_btn = types.InlineKeyboardButton("✅ Подтвердить", callback_data="confirm_clear")
-        back_btn = types.InlineKeyboardButton("❌ Отмена", callback_data="back_to_main")
-        markup.row(confirm_btn, back_btn)
-        text = "⚠️ После очистки истории вы безвозвратно потеряете возможность просмотретиь ваши старые запросы.\nВы уверены, что хотите очистить историю запросов?"
-
-        bot.send_message(message.chat.id, CLEAR_DIALOG_MESSAGE, reply_markup=markup)
+        # await bot.send_message(message.chat.id, response)
 
 
     @bot.message_handler(commands=["privacy"])
-    def cmd_send_privacy(message: Message):
-        bot.send_message(message.chat.id, PRIVACY_MESSAGE, parse_mode="HTML")
+    async def cmd_send_privacy(message: Message):
+        await ensure_user_exists(message.from_user)
+        await bot.send_message(message.chat.id, PRIVACY_MESSAGE, parse_mode="HTML")
+    
+    # --- Панель администратора ---
+    @bot.message_handler(commands=["admin"])
+    async def cmd_admin_panel(message: Message):
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+
+        if user_id not in ADMINS:
+            msg = await bot.reply_to(message, "⚠️ Эта команда не обрабатывается")
+            await auto_delete_message(bot, chat_id, msg.message_id, 3)
+            return
+
+        await bot.send_message(
+            chat_id=chat_id,
+            text="🔐 Панель администратора",
+            reply_markup=create_admin_keyboard()
+        )
+
+    # Принимаем ввод пользователей от админа
+    @bot.message_handler(func=lambda m: m.from_user.id in ADMINS and user_states.get(m.from_user.id) == "awaiting_user_ids_for_subscription")
+    async def handle_grant_subscription_input(message: Message):
+        user_id = message.from_user.id
+        input_text = message.text
+        await process_grant_subs_input(bot, message, input_text)
+        user_states.pop(user_id, None)
+
+    @bot.message_handler(func=lambda message: True)
+    async def cmd_handle_message(message: Message):
+        user = message.from_user
+        user_id = user.id
+        chat_id = message.chat.id
+        user_prompt = message.text
+        error_markup = create_inline_menu(SUPPORT_BUTTON)
+        processing_msg = None
+        await ensure_user_exists(user)
+
+        def get_key_by_name(name):
+            for key, data in AI_PRESETS.items():
+                if data.get("name") == name:
+                    return key
+            return None  # Если не найдено
+
+        try:
+            if user_prompt.strip().startswith("/"):
+                # Игнор команд, которые не обрабатываются отдельно
+                logger.warning(f"Пользователь {user_id} отправил команду, но она не поддерживается: {user_prompt}")
+                msg = await bot.reply_to(message, "⚠️ Эта команда не обрабатывается")
+                await auto_delete_message(bot, chat_id, msg.message_id, 3)
+                return
+            
+            await check_subscriptions_expiry(bot, user_id=user_id)
+
+            
+            # Проверка, есть ли уже активный запрос у пользователя
+            if user_id in user_tasks:
+                msg = await bot.send_message(chat_id, "⏳ Пожалуйста, дождитесь ответа на предыдущее сообщение")
+                await auto_delete_message(bot, chat_id, msg.message_id, 2)
+                return
+            
+            user_data = await get_user_info(user_id)
+            ai_preset = AI_PRESETS.get(user_data["ai_model"], AI_PRESETS["gpt-4o"])
+            ai_role = ROLE_PRESETS.get(user_data["role"], ROLE_PRESETS["default"])
+            ai_model = get_key_by_name(ai_preset["name"])
+            role_prompt = await get_current_prompt(user_id)
+
+
+            handler_info = ai_handlers.get(ai_model)
+            if not handler_info:
+                msg = await bot.send_message(chat_id, "❌ Данная модель временно недоступна.")
+                await auto_delete_message(bot, chat_id, msg.message_id, 2)
+                return
+            
+            ai_method = handler_info["method"]
+            ai_client = handler_info["client"]
+
+            # Проверяем подписку и лимиты
+            allowed, reason = await check_ai_usage(user_id, user_data["ai_model"])
+            if not allowed:
+                msg = await bot.send_message(chat_id, reason + ".\n\nС подпиской ограничения на использование ИИ исчезнут")
+                await auto_delete_message(bot, chat_id, msg.message_id, 3)
+                return
+            
+            # Формирование messages с историей прошлых запросов
+            messages = await build_history_messages(user_id, role_prompt, user_prompt, max_history=10)
+            
+            processing_msg_text = ""
+            # Временное сообщение об обработке
+            if ai_model in ["dalle3", "midjourney"]:
+                processing_msg_text = f"🧠 {ai_preset['name']} генерирует изображение по вашему описанию\n\nℹ️ Созданные изображения не сохраняются в истории"
+            else:
+                processing_msg_text = f"🧠 {ai_preset['name']} формулирует ответ как {ai_role["name"]}"
+            
+            processing_msg = await bot.reply_to(message, processing_msg_text)
+
+            # Добавление в очередь задач
+            user_tasks[user_id] = True
+
+            # Вызов ИИ
+            ai_response = await ai_method(
+                ai_model, ai_role,
+                messages, ai_client
+                
+            )
+
+            if ai_response != None and ai_model not in ["dalle3", "midjourney"]:
+                formatted_response = clean_ai_response(ai_response)
+                # formatted_response = ai_response
+                await save_query_to_history(user_id, user_prompt, formatted_response)
+                
+                # Удаление временного сообщения
+                await safe_delete_message(bot, chat_id, processing_msg.message_id )
+
+                # Отправка реального сообщения
+                await bot.send_message(chat_id, formatted_response, parse_mode="HTML")
+
+                #Счетчик исп-я +1
+                await users_collection.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {f"monthly_usage.{ai_model}": 1}}  # Увеличиваем счётчик
+                )
+
+            elif ai_response != None and ai_model in ["dalle3", "midjourney"]:
+                
+                image = await download_url_image(chat_id, ai_response)
+                caption=f"""
+🖼️Изображение по вашему запросу:
+```Запрос
+{messages[-1]["content"]}
+```
+                        """
+                
+                # Удаление временного сообщения
+                await safe_delete_message(bot, chat_id, processing_msg.message_id )
+
+                # Отправляем фото
+                await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=image,
+                    caption=caption,
+                    parse_mode="MarkdownV2"
+                )
+
+                #Счетчик исп-я +1
+                await users_collection.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {f"monthly_usage.{ai_model}": 1}}  # Увеличиваем счётчик
+                )
+
+            else:
+                error_message = format_error_system_message(
+                    title="Неизвестная ошибка.",
+                    error_text=str(e)
+                )
+                msg = await bot.send_message(chat_id, error_message, reply_markup=error_markup, parse_mode="MarkdownV2")
+                await auto_delete_message(bot, chat_id, msg.message_id, 30)
+
+        except Exception as e:
+            logger.error(f"Ошибка при обработке запроса: {e}")
+            if processing_msg:
+                await safe_delete_message(bot, chat_id, processing_msg.message_id)
+
+            error_message = format_error_system_message(
+                    title="Неизвестная ошибка.",
+                    error_text=str(e)
+                )
+            msg = await bot.send_message(chat_id, error_message, reply_markup=error_markup, parse_mode="MarkdownV2")
+            await auto_delete_message(bot, chat_id, msg.message_id, 30)
+        finally:
+            # Удаляем из списка активных задач
+            if user_id in user_tasks:
+                del user_tasks[user_id]
 

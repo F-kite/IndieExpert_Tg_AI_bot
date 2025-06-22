@@ -1,6 +1,6 @@
 from telebot import types
 from dotenv import load_dotenv
-from config import SUBSCRIPTION_PRICE, AI_PRESETS, ROLE_PRESETS, SUPPORT_BUTTON
+from config import SUBSCRIPTION_PRICE, AI_PRESETS, ROLE_PRESETS
 from database.client import get_user_info
 from utils.helpers import extract_russian_text
 
@@ -49,11 +49,11 @@ def create_inline_menu(buttons):
     return markup
 
 
-def create_ai_keyboard(user_id):
+async def create_ai_keyboard(user_id, ai_handlers):
     markup = types.InlineKeyboardMarkup()
     
     # Получаем текущую модель из БД
-    user_data = get_user_info(user_id)
+    user_data = await get_user_info(user_id)
     current_model_key = user_data.get("ai_model", "gpt-4o")
     is_subscribed = user_data.get("is_subscribed", False)
 
@@ -62,6 +62,7 @@ def create_ai_keyboard(user_id):
         row = []
         for key, data in models[i:i+2]:
             model_name = data["name"]
+            handler_info = ai_handlers.get(key)
             
             if not is_subscribed and key != "gpt-4o":
                 # Для неподписанных пользователей: заблокировать все, кроме gpt-4o
@@ -70,6 +71,8 @@ def create_ai_keyboard(user_id):
                 if key == current_model_key:
                     # Если это текущая модель — показываем галочку
                     btn = types.InlineKeyboardButton(f"✅ {model_name}", callback_data=f"ai_{key}")
+                elif not handler_info:
+                    btn = types.InlineKeyboardButton(f"🚫 {model_name}", callback_data=f"ai_{key}")
                 else:
                     # Другие модели для подписчиков
                     btn = types.InlineKeyboardButton(f"{model_name}", callback_data=f"ai_{key}")
@@ -85,10 +88,10 @@ def create_ai_keyboard(user_id):
     return markup
 
 
-def create_role_keyboard(user_id):
+async def create_role_keyboard(user_id):
     markup = types.InlineKeyboardMarkup()
 
-    user_data = get_user_info(user_id)
+    user_data = await get_user_info(user_id)
     current_role_key = user_data.get("role", "default")
     is_subscribed = user_data.get("is_subscribed", False)
 
@@ -120,8 +123,24 @@ def create_role_keyboard(user_id):
 
     return markup
 
+# Оплата подписки
 def create_payment_keyboard():
     markup = types.InlineKeyboardMarkup()
     btn = types.InlineKeyboardButton(f"💳 Подписаться за {SUBSCRIPTION_PRICE} ⭐", pay=True)
     markup.add(btn)
+    return markup
+
+# Продление подписки
+def create_payment_renew_keyboard():
+    markup = types.InlineKeyboardMarkup()
+    btn = types.InlineKeyboardButton(f"💳 Продлить подписку за {SUBSCRIPTION_PRICE} ⭐", pay=True)
+    markup.add(btn)
+    return markup
+
+# Админ-панель
+def create_admin_keyboard():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    btn_list_users = types.InlineKeyboardButton("👥 Список пользователей", callback_data="admin_list_users")
+    btn_grant_subs = types.InlineKeyboardButton("💳 Выдать подписку", callback_data="admin_grant_subs")
+    markup.add(btn_list_users, btn_grant_subs)
     return markup

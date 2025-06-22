@@ -2,9 +2,9 @@ from datetime import datetime
 from config import AI_PRESETS, AI_REQUEST_LIMIT
 from database.client import users_collection, get_user_info
 
-def check_ai_usage(user_id, ai_model_key):
+async def check_ai_usage(user_id, ai_model_key):
     now = datetime.now()
-    user_data = get_user_info(user_id)
+    user_data = await get_user_info(user_id)
     is_subscribed = user_data.get("is_subscribed", False)
 
     if is_subscribed:

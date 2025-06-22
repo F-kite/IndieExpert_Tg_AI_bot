@@ -20,21 +20,21 @@ AI_PRESETS = {
         "price_per_1000_input_tokens": 0.001,
         "price_per_1000_output_tokens": 0.0015,
     },
-    "perplexity": {
+    "sonar": {
         "name": "Perplexity",
         "description": "Это тот парень, который всегда спорит с ChatGPT. Он уверен, что прав, а ты должен сам решить, кому верить.",
         "style": "аналитический",
         "price_per_1000_input_tokens": 0.001,
         "price_per_1000_output_tokens": 0.001,
     },
-    "deepseek_v3": {
-        "name": "DeepSeek v3",
+    "deepseek": {
+        "name": "DeepSeek",
         "description": "Китайский гений, который умеет всё, но делает это тихо и без лишнего шума. Хорош для кода и аналитики.",
         "style": "аналитический",
         "price_per_1000_input_tokens": 0.0007,
         "price_per_1000_output_tokens": 0.0007,
     },
-    "claude_3_7": {
+    "claude": {
         "name": "Claude 3.7",
         "description": "Он как учёный в очках: внимательный, аккуратный и чуть занудливый. Лучший выбор для сложных вопросов и дипломных работ.",
         "style": "аналитический",

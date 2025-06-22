@@ -1,15 +1,19 @@
-import threading
+import asyncio
 import re
 import telebot
 from datetime import datetime
-from bot_init import bot
+from config import GENERAL_SYSTEM_PROMPT
 from database.client import get_user_history
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-def build_history_messages(user_id, role_prompt, user_prompt, max_history=10):
-    history = get_user_history(user_id)[-max_history:]
+async def build_history_messages(user_id, role_prompt, user_prompt, max_history=10):
+    user_history = await get_user_history(user_id)
+    history = user_history[-max_history:]
+
+    role_prompt += f"\n{GENERAL_SYSTEM_PROMPT}"
+
     messages = [{"role": "system", "content": role_prompt}]
     for entry in history:
         messages.append({"role": "user", "content": entry["query"]})
@@ -17,20 +21,18 @@ def build_history_messages(user_id, role_prompt, user_prompt, max_history=10):
     messages.append({"role": "user", "content": user_prompt})
     return messages
 
-def auto_delete_message(chat_id, message_id, delay=5):
-    def delete():
-        try:
-            bot.delete_message(chat_id, message_id)
-        except Exception as e:
-            logger.error(f"❌ Не удалось удалить сообщение в чате {message_id}: {e}")
-    
-    timer = threading.Timer(delay, delete)
-    timer.start()
+
+async def auto_delete_message(bot, chat_id, message_id, delay=5):
+    try:
+        await asyncio.sleep(delay)  # Ждём указанное количество секунд
+        await bot.delete_message(chat_id, message_id)
+    except Exception as e:
+        logger.warning(f"⚠️ Не удалось удалить сообщение {message_id}: {e}")
 
 #В случаях, когда есть вероятность, что пользователь нажмет на одну кнопку несколько раз
-def safe_edit_message(bot, chat_id, message_id, text, reply_markup=None, parse_mode=None):
+async def safe_edit_message(bot, chat_id, message_id, text, reply_markup=None, parse_mode=None):
     try:
-        bot.edit_message_text(
+        await bot.edit_message_text(
             text=text,
             chat_id=chat_id,
             message_id=message_id,
@@ -45,6 +47,14 @@ def safe_edit_message(bot, chat_id, message_id, text, reply_markup=None, parse_m
            logger.error(f"❌ Не удалось обновить сообщение: {e}")
     return True
 
+
+async def safe_delete_message(bot, chat_id, message_id):
+    try:
+        await bot.delete_message(chat_id, message_id)
+    except Exception as e:
+        logger.warning(f"Не удалось удалить сообщение {message_id}: {e}")
+
+
 def extract_russian_text(text):
     start_index = None
     for i, char in enumerate(text):
@@ -54,6 +64,7 @@ def extract_russian_text(text):
     if start_index is not None:
         return text[start_index:]
     return ""
+
 
 def format_error_system_message(error_text, title="Ошибка",):
     """
@@ -68,14 +79,27 @@ def format_error_system_message(error_text, title="Ошибка",):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     return f"""
-❌ <b>{title}</b>
+❌ *{title}*
 Обратитесь в поддержку, предоставив следующий текст:
-<code>{now}\n{escaped_error}</code>
+```
+{now}\n{escaped_error}
+```
     """.strip()
 
-# Экранирование спецсимволов в MarkdownV2
-def escape_markdown_v2(text):
-    # Список символов, которые нужно экранировать в MarkdownV2
-    escape_chars = r"'_\*\[\]\(\)~`>#+-=|{}.!"
-    return re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
-    
+# Очистка от лишних символов 
+def clean_ai_response(text):
+    if not isinstance(text, str):
+        return ""
+
+    # Удаляем все основные элементы Markdown
+    text = re.sub(r'[\*\_\`\~\#\>\+\!\$\^]', '', text)
+
+    # Удаляем ссылки и изображения
+    text = re.sub(r'!\[.*?\]\(.*?\)', '', text)
+
+    # Удаляем лишние переносы строк
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    text = re.sub(r'\\', '', text)
+
+    return text.strip()
+
