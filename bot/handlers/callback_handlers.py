@@ -40,7 +40,6 @@ def register_handlers(bot, ai_handlers):
             if user_id in ADMINS : is_admin = "🔆 Царь и бог (администратор)"
 
             if not user_profile:
-                # bot.answer_callback_query(call.id, "❌ Профиль не найден.")
                 msg = await bot.send_message(chat_id, "❌ Профиль не найден.")
                 await auto_delete_message(bot, chat_id, msg.message_id)
                 return

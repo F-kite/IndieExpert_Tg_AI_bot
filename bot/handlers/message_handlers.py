@@ -19,7 +19,6 @@ logger = get_logger(__name__)
 def register_handlers(bot, user_tasks, ai_handlers):
     @bot.message_handler(commands=["start"])
     async def cmd_send_welcome(message: Message):
-        
         logger.info(f"user_id : {message.from_user.id}, chat_id : {message.chat.id}")  
         
         await ensure_user_exists(message.from_user)
@@ -73,10 +72,6 @@ def register_handlers(bot, user_tasks, ai_handlers):
         await ensure_user_exists(user)
         
         user_data = await get_user_info(user_id)
-        # if not user_data.get("is_subscribed", False) and AI_PRESETS[user_data.get("ai_model", "gpt-4o")] != "gpt-4o":
-        #     msg = bot.send_message(message.chat.id, "🔒 Нужна подписка, чтобы выбрать другую модель")
-        #     auto_delete_message(message.chat.id, msg.message_id)
-        #     return
         
         markup = await create_ai_keyboard(user_id, ai_handlers)
         await bot.send_message(message.chat.id, AI_MENU_MESSAGE, reply_markup=markup)
@@ -89,13 +84,6 @@ def register_handlers(bot, user_tasks, ai_handlers):
         await ensure_user_exists(user)
 
         user_data = await get_user_info(user_id)
-        # if not user_data.get("is_subscribed", False):
-        #     msg = bot.send_message(
-        #         message.chat.id,
-        #         "🔒 Нужна подписка, чтобы выбрать другую роль"
-        #     )
-        #     auto_delete_message(message.chat.id, msg.message_id)
-        #     return
 
         markup = await create_role_keyboard(user_id)
         await bot.send_message(message.chat.id, ROLE_MENU_MESSAGE, reply_markup=markup, parse_mode="Markdown")
@@ -218,13 +206,6 @@ def register_handlers(bot, user_tasks, ai_handlers):
             return
         
         await show_history_page(bot, chat_id, user_id, page_index=0)
-        
-        # response = f"{HISTORY_MESSAGE}\n"
-        # for item in history:
-        #     formatted_date = item["timestamp"].strftime("%d-%m-%Y %H:%M")  
-        #     response += f"\n{formatted_date}\n👤 {item['query']}\n🤖 {item['response']}\n"
-
-        # await bot.send_message(message.chat.id, response)
 
 
     @bot.message_handler(commands=["privacy"])

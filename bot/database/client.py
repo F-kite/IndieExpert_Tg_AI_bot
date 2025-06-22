@@ -104,8 +104,6 @@ async def get_all_users():
     return await cursor.to_list(length=None)
 
 async def get_user_history(user_id):
-    # history = list(await history_collection.find({"user_id": user_id}, {"_id": 0}).sort("timestamp", -1))
-    # return history
     cursor = history_collection.find({"user_id": user_id}, {"_id": 0})
     return await cursor.to_list(length=100)
 
