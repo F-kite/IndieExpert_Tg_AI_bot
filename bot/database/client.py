@@ -49,7 +49,7 @@ async def ensure_user_exists(user):
             "last_seen": now,
             "is_subscribed": False,
             "subscription_start":"",
-            "subscription_end": "",
+            "subscription_end": None,
             "ai_model": "gpt-4o",
             "role": "default",
             "custom_prompt":"",
@@ -58,15 +58,29 @@ async def ensure_user_exists(user):
         await users_collection.insert_one(user_data)
     else:
         is_subscribed = user_doc.get("is_subscribed", False)
+        
         # Выдача подписки админам
         if (not is_subscribed and user_id in ADMINS) or (user_id in ADMINS):
             await users_collection.update_one(
                 {"user_id": user_id},
                 {"$set": {"is_subscribed": True, "subscription_end": None}}  # Без ограничения по времени
             )
-        subscription_end = user_doc.get("subscription_end")
+
+        subscription_end = user_doc.get("subscription_end", None)
+
+        if subscription_end == "":
+            subscription_end = None
+        elif isinstance(subscription_end, str):
+            try:
+                # Преобразуем строку в объект datetime
+                subscription_end = datetime.fromisoformat(subscription_end)
+            except ValueError:
+                logger.warning(f"[DEBUG] Некорректный формат даты у пользователя {user_id}")
+                logger.warning(f"[DEBUG] subscription_end: {subscription_end} | Тип: {type(subscription_end)}")
+                subscription_end = None
+
         # Отключение подписки если истек ее срок
-        if subscription_end != None and (now.date() == subscription_end.date()):
+        if (subscription_end is not None) and (now.date() == subscription_end.date()):
             await users_collection.update_one(
                 {"user_id": user_id},
                 {"$set": {"is_subscribed": False}}
