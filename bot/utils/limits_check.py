@@ -1,29 +1,22 @@
 from datetime import datetime
-from config import AI_PRESETS, AI_REQUEST_LIMIT
+from config import AI_PRESETS, AI_REQUEST_LIMIT, ADMINS
 from database.client import users_collection, get_user_info
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 async def check_ai_usage(user_id, ai_model_key):
     now = datetime.now()
     user_data = await get_user_info(user_id)
     is_subscribed = user_data.get("is_subscribed", False)
 
-    if is_subscribed:
-        return True, ""
+    if not is_subscribed:
+        return False, "Подписка не активирована"
 
     limits = user_data.get("request_limits", {})
-    model_limit = limits.get(ai_model_key, {"count": 0, "last_reset": now})
+    model_limit = limits.get(ai_model_key, {"count": 0})
 
-    # Сброс лимита, если начался новый месяц
-    last_reset = model_limit["last_reset"]
-    if last_reset.month != now.month or last_reset.year != now.year:
-        model_limit["count"] = 0
-        model_limit["last_reset"] = now
-        users_collection.update_one(
-            {"user_id": user_id},
-            {"$set": {f"request_limits.{ai_model_key}": model_limit}}
-        )
-
-    if model_limit["count"] >= AI_REQUEST_LIMIT:
+    if model_limit["count"] >= AI_REQUEST_LIMIT and user_id not in ADMINS:
         return False, f"❌ Лимит использования {AI_PRESETS[ai_model_key]['name']} исчерпан"
 
     # Увеличиваем счетчик
