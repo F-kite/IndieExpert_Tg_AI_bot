@@ -115,11 +115,13 @@ async def ensure_user_exists(user):
         )
         is_subscribed = False
 
+    current_role = user_data.get("role")
+    if current_role not in  ["tarot_reader", "compatibility", "numerologist"]: current_role = "tarot_reader"
     # Если нет подписки - все сбрасывается по умолчанию
     if not is_subscribed:
         await users_collection.update_one(
         {"user_id": user_id},
-        {"$set": {"ai_model": "gpt-4o", "role":"tarot_reader", "subscription_start":"", "subscription_end":""}}
+        {"$set": {"ai_model": "gpt-4o", "role":current_role, "subscription_start":"", "subscription_end":""}}
     )
         
     # Сбрасываем лимиты в начале нового месяца

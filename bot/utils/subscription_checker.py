@@ -30,10 +30,10 @@ async def check_subscriptions_expiry(bot: AsyncTeleBot, user_id=0):
         user_data = await get_user_info(user_id)
         subscription_end = user_data.get("subscription_end")
 
-        if not user_data or (not subscription_end and subscription_end is not None):
-            logger.info(f"subscription_end = {user_data.get("subscription_end")}")
-            logger.warning(f"❌ Не найден пользователь {user_id} или нет данных о подписке")
+        if not user_data:
+            logger.warning(f"❌ Не найден пользователь {user_id}")
             return
+
         users = [user_data]  # оборачиваем в список для единообразия
 
     for user_data in users:
@@ -41,7 +41,7 @@ async def check_subscriptions_expiry(bot: AsyncTeleBot, user_id=0):
         subscription_end = user_data.get("subscription_end")
 
         if not subscription_end or subscription_end is None:
-            continue  # Бессрочная подписка
+            continue
 
         if subscription_end.date() < now:
             continue

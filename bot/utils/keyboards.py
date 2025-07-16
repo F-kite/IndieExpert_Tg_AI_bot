@@ -131,7 +131,7 @@ async def create_role_keyboard(user_id):
         for key, data in roles[i:i+2]:
             role_name = data["name"]
             
-            if not is_subscribed and key != "tarot_reader":
+            if not is_subscribed and key not in  ["tarot_reader", "compatibility", "numerologist"]:
                 # Для неподписанных пользователей: заблокировать все, кроме tarot_reader
                 btn = types.InlineKeyboardButton(f"🔒 {extract_russian_text(role_name)}", callback_data="locked_ai")
             else:

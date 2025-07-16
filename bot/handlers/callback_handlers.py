@@ -2,11 +2,12 @@ from telebot import types
 from telebot.types import CallbackQuery
 from config import *
 from database.client import *
-from utils.keyboards import *
 from utils.helpers import safe_edit_message, auto_delete_message, extract_russian_text
 from utils.history_pages import show_history_page
 from utils.logger import get_logger
 from handlers.admin_handlers import *
+from utils.keyboards import *
+
 
 logger = get_logger(__name__)
 
@@ -312,7 +313,7 @@ def register_handlers(bot, ai_handlers):
         is_subscribed = user_doc.get("is_subscribed", False)
 
         try:
-            if not is_subscribed and role_key != "tarot_reader":
+            if not is_subscribed and role_key not in  ["tarot_reader", "compatibility", "numerologist"]:
                 msg = await bot.send_message(chat_id, "❗️Подпишись, чтобы разблокировать эту роль")
                 await auto_delete_message(bot, chat_id, msg.message_id)
                 return

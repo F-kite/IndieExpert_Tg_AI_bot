@@ -10,9 +10,6 @@ async def check_ai_usage(user_id, ai_model_key):
     user_data = await get_user_info(user_id)
     is_subscribed = user_data.get("is_subscribed", False)
 
-    if not is_subscribed:
-        return False, "Подписка не активирована"
-
     limits = user_data.get("request_limits", {})
     model_limit = limits.get(ai_model_key, {"count": 0})
 

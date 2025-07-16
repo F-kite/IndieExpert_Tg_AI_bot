@@ -7,6 +7,7 @@ from telebot.types import Message
 from utils.helpers import auto_delete_message, clean_ai_response
 from utils.logger import get_logger
 
+
 logger = get_logger(__name__)
 
 async def send_to_gpt(model, role, messages, client):

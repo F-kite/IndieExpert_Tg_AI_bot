@@ -6,6 +6,7 @@ from database.client import get_all_users, grant_subscription_to_users, users_co
 from config import ADMINS, user_states
 from utils.logger import get_logger
 from utils.helpers import auto_delete_message
+from utils.keyboards import create_admin_keyboard
 
 logger = get_logger(__name__)
 
@@ -33,7 +34,7 @@ async def handle_admin_list_users(bot: AsyncTeleBot, call: CallbackQuery):
         role_label = "👑" if user_id in ADMINS else "👤"
         response += f"{role_label} @{username} ID: <code>{user_id}</code> Подписка: {sub_status}\n"
 
-    await bot.send_message(chat_id, response, parse_mode="HTML")
+    await bot.send_message(chat_id, response, reply_markup=create_admin_keyboard(), parse_mode="HTML")
 
 
 async def handle_admin_grant_subs(bot: AsyncTeleBot, call: CallbackQuery):
@@ -51,7 +52,7 @@ async def handle_admin_grant_subs(bot: AsyncTeleBot, call: CallbackQuery):
 
 ℹ️ Подписка выдается на месяц
 """
-    await bot.send_message(chat_id, text)
+    await bot.send_message(chat_id, text, )
     user_states[user_id] = "awaiting_user_ids_for_subscription"
 
 
@@ -92,6 +93,7 @@ async def process_grant_subs_input(bot: AsyncTeleBot, message: Message, input_te
             chat_id, f"✅ Подписка активирована для {count} пользователей."
         )
         await auto_delete_message(bot, chat_id, success_msg.message_id, delay=5)
+        await bot.send_message(chat_id, "", reply_markup=create_admin_keyboard())
 
     except Exception as e:
         logger.error(f"❌ Ошибка при выдаче подписки: {e}")
@@ -173,7 +175,7 @@ async def process_revoke_subs_input(bot: AsyncTeleBot, message: Message, input_t
 
     # Ответ админу
     success_msg = f"✅ Подписка отозвана у {revoked_count} пользователей."
-    await bot.send_message(chat_id, success_msg)
+    await bot.send_message(chat_id, success_msg, reply_markup=create_admin_keyboard())
 
     if failed_users:
         failed_msg = f"❌ Не удалось отозвать подписку у следующих пользователей: {', '.join(failed_users)}"
@@ -217,4 +219,5 @@ async def send_maintenance_notification(bot: AsyncTeleBot):
     else:
         logger.info(f"✅ Уведомление успешно отправлено всем {len(users)} пользователям")
 
+    await bot.send_message(chat_id, "", reply_markup=create_admin_keyboard())
     return [len(users) - len(failed_sends), len(failed_sends)]
