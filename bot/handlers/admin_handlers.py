@@ -1,8 +1,13 @@
 from telebot.async_telebot import AsyncTeleBot
-from telebot.types import Message, CallbackQuery
+from telebot.types import Message, CallbackQuery, InputFile
+import pandas as pd
+from io import BytesIO
 import asyncio
+from openpyxl.styles import Alignment
+from openpyxl import load_workbook
 
-from database.client import get_all_users, grant_subscription_to_users, users_collection
+
+from database.client import get_all_users, grant_subscription_to_users, users_collection, history_collection
 from config import ADMINS, user_states
 from utils.logger import get_logger
 from utils.helpers import auto_delete_message
@@ -179,6 +184,83 @@ async def process_revoke_subs_input(bot: AsyncTeleBot, message: Message, input_t
         failed_msg = f"❌ Не удалось отозвать подписку у следующих пользователей: {', '.join(failed_users)}"
         await bot.send_message(chat_id, failed_msg)
 
+#Вытягивание из бд запросов пользователей
+async def export_queries_since_date(bot, chat_id, since_date):
+    try:
+        # Получаем данные из БД
+        cursor = history_collection.find({"timestamp": {"$gte": since_date}})
+        records = await cursor.to_list(length=None)
+
+        if not records:
+            msg = await bot.send_message(chat_id, "❌ Нет данных за указанный период.")
+            await auto_delete_message(bot, chat_id, msg.message_id, delay=5)
+            return
+
+        # Преобразуем данные для DataFrame
+        data = []
+        for record in records:
+            data.append({
+                "ID пользователя": record["user_id"],
+                "Запрос": record["query"],
+                "Ответ": record["response"],
+                "Дата": record["timestamp"].strftime("%Y-%m-%d")
+            })
+
+        df = pd.DataFrame(data)
+
+        # Создаём Excel в памяти
+        excel_file = BytesIO()
+        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
+            df.to_excel(writer, index=False, sheet_name='Запросы')
+
+        # Редактируем после записи
+        excel_file.seek(0)
+        wb = load_workbook(excel_file)
+        ws = wb.active
+
+        # Настройка: автоширина, перенос текста, выравнивание
+        for col in ws.columns:
+            column = col[0].column_letter
+
+            # Перенос текста и выравнивание
+            for cell in col:
+                wrap_text = isinstance(cell.value, str) and len(str(cell.value)) > 30
+                align_left = cell.column_letter not in ["A", "D"]  # ID и Дата — по центру
+                cell.alignment = Alignment(
+                    wrap_text=wrap_text,
+                    horizontal="center" if column in ["A", "D"] else "left",
+                    vertical="top"
+                )
+
+                # Ограничиваем высоту строки
+                max_row_height = 150
+                ws.row_dimensions[cell.row].height = min(max_row_height, ws.row_dimensions[cell.row].height or 15)
+
+            # Автоширина колонок
+            max_length = 0
+            for cell in col:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column].width = adjusted_width
+
+        # Отправляем файл
+        excel_file.seek(0)
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        caption = f"📎 История запросов от {since_date.strftime('%Y-%m-%d')} до текущего дня"
+        await bot.send_document(
+            chat_id=chat_id,
+            document=InputFile(output, f"Логи от {since_date.strftime('%Y-%m-%d')}.xlsx"),
+            caption=caption
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при экспорте запросов: {e}")
+        msg = await bot.send_message(chat_id, "❌ Не удалось сформировать файл")
+        await auto_delete_message(bot, chat_id, msg.message_id, delay=5)
 
 #Рассылка о тех. обслуживании
 async def send_maintenance_notification(bot: AsyncTeleBot):

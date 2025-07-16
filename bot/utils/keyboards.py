@@ -196,8 +196,9 @@ def create_payment_renew_keyboard():
 def create_admin_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     btn_list_users = types.InlineKeyboardButton("👥 Список пользователей", callback_data="admin_list_users")
+    btn_list_process_export = types.InlineKeyboardButton("📋 Сформировать таблицу с запросами", callback_data="process_export")
     btn_grant_subs = types.InlineKeyboardButton("💳 Выдать подписку", callback_data="admin_grant_subs")
     btn_revoke_subs = types.InlineKeyboardButton("🚫 Забрать подписку", callback_data="admin_revoke_subscription")
     btn_maintenance = types.InlineKeyboardButton("🔧 Рассылка о тех. обслуживании", callback_data="admin_send_maintenance")
-    markup.add(btn_list_users, btn_grant_subs, btn_revoke_subs, btn_maintenance)
+    markup.add(btn_list_users, btn_list_process_export, btn_grant_subs, btn_revoke_subs, btn_maintenance)
     return markup

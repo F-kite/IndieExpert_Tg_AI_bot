@@ -11,7 +11,7 @@ from utils.logger import get_logger
 from utils.subscription_checker import check_subscriptions_expiry
 from utils.image_helpers import download_url_image
 
-from handlers.admin_handlers import process_grant_subs_input, process_revoke_subs_input
+from handlers.admin_handlers import process_grant_subs_input, process_revoke_subs_input, export_queries_since_date
 from handlers.ai_handlers import handle_voice_message, handle_text_to_speech
 from utils.keyboards import create_admin_keyboard
 
@@ -232,7 +232,8 @@ def register_handlers(bot, user_tasks, ai_handlers):
     async def cmd_send_privacy(message: Message):
         await ensure_user_exists(message.from_user)
         await bot.send_message(message.chat.id, PRIVACY_MESSAGE, parse_mode="HTML")
-    
+
+
     # --- Панель администратора ---
     @bot.message_handler(commands=["admin"])
     async def cmd_admin_panel(message: Message):
@@ -250,6 +251,7 @@ def register_handlers(bot, user_tasks, ai_handlers):
             reply_markup=create_admin_keyboard()
         )
 
+
     # Принимаем ввод пользователей от админа
     @bot.message_handler(func=lambda m: m.from_user.id in ADMINS and user_states.get(m.from_user.id) == "awaiting_user_ids_for_subscription")
     async def handle_grant_subscription_input(message: Message):
@@ -264,6 +266,28 @@ def register_handlers(bot, user_tasks, ai_handlers):
         input_text = message.text.strip()
         await process_revoke_subs_input(bot, message, input_text)
         user_states.pop(user_id, None)
+
+    @bot.message_handler(func=lambda m: m.from_user.id in ADMINS and user_states.get(m.from_user.id) == "awaiting_export_date")
+    async def process_export_date(message):
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+
+        try:
+            # Парсим дату
+            since_date = datetime.strptime(message.text.strip(), "%Y-%m-%d")
+
+            # Удаляем служебное сообщение
+            await bot.delete_message(chat_id, message.message_id)
+
+            # Сбрасываем состояние
+            user_states.pop(user_id, None)
+
+            # Экспортируем данные
+            await export_queries_since_date(bot, chat_id, since_date)
+
+        except ValueError:
+            msg = await bot.send_message(chat_id, "❌ Неверный формат даты. Используйте ГГГГ-ММ-ДД")
+            await auto_delete_message(bot, chat_id, msg.message_id, delay=5)
     
     # ---   ---   ---
     

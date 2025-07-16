@@ -511,4 +511,12 @@ def register_handlers(bot, ai_handlers):
         )
         await bot.answer_callback_query(call.id, "Рассылка отменена")
 
+    #Экспорт записей 
+    @bot.callback_query_handler(func=lambda call: call.data == "process_export")
+    async def handle_export_queries(call:CallbackQuery):
+        user_id = call.from_user.id
+        chat_id = call.message.chat.id
 
+        # Запрашиваем дату у пользователя
+        await bot.send_message(chat_id, "📅 Введите дату в формате ГГГГ-ММ-ДД, от которой экспортировать запросы:")
+        user_states[user_id] = "awaiting_export_date"
