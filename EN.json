@@ -1,0 +1,92 @@
+{
+  "welcome_message": "👋 Hey, my friend!\n\n🧠 I'll help you with the coolest neural networks.\n🎭 I'll teach you how to communicate properly, check your compatibility with a partner, create a daily plan, and suggest the best time for achievements based on stars and numbers.\n💳 Subscription — only 150 ⭐️ and you get access to all neural networks, plus I'll respond to your voice messages.\n\n👇 Press the button, choose a model and role, send a message — and let's start working for your request!",
+  "interface": {
+    "button_main_menu": "🏠 Main Menu",
+    "button_profile": "👤 Profile",
+    "button_choose_ai": "🧠 Choose Neural Network",
+    "button_choose_role": "🎭 Choose Bot Role",
+    "button_speech_settings": "🎙️ Voice Message Settings",
+    "button_history": "📖 Request History",
+    "button_privacy": "🔒 Privacy Policy",
+    "button_support": "💬 Support",
+    "back_button": "🏠 Main Menu",
+    "clear_button": "🗑️ Clear History",
+    "profile_button": "👤 Profile",
+    "subscribe_button": "💳 Subscribe",
+    "ai_model_button": "🧠 AI Model",
+    "role_button": "🎭 Role Selection",
+    "speech_settings_button": "🎙️ Voice Message Settings",
+    "support_button": "💬 Support",
+    "stat_button": "📊 Statistics"
+  },
+  "subscription": {
+    "subscription_success": "✅ You have successfully subscribed for 30 days!",
+    "subscription_already": "🕶️ You already have a subscription; a second one won't add new features",
+    "subscription_admin": "👑 You are an admin. Subscription is active forever.",
+    "unsubscribe_success": "❌ You have unsubscribed from the bot.",
+    "subscription_offer": "💳 Want to subscribe?\n\nWithout a subscription, you're like me without oil in the engine: technically moving, but won't last long.\n\nSubscription — only 150 ⭐️. Yes, yes! Not dollars, not euros, not crypto.\n\nWhat you get:\n- Access to all AI models.\n- Ability to change roles.\n- Responses better than my attempts to fix a fridge.\n\nYou can stay free, of course. But then we won't get to know each other closely.",
+    "subscribe_locked": "❗️Subscribe to unlock this feature",
+    "choose_model_locked": "❗️Subscribe to unlock this model",
+    "choose_role_locked": "❗️Subscribe to unlock this role"
+  },
+  "history": {
+    "history_empty": "Request history is empty.",
+    "clear_history_confirm": "🗑️ Are you sure you want to clear all history?\n\nIt's like resetting your brain to factory settings. Just without a guarantee it'll get better.\n\n⚠️ After this, you'll lose:\n- All your requests.\n- My responses.\n- Memories (virtual ones).\n\nBut you'll start with a clean slate. Or a new question.",
+    "clear_history_done": "🗑️ History successfully cleared. Deleted records: {deleted_count}",
+    "clear_history_cancel": "Action canceled",
+    "history_title": "📖 Request History:",
+    "history_empty_page": "Request history is empty.",
+    "history_navigation_end": "⛔ This is the end of history."
+  },
+  "errors": {
+    "profile_not_found": "❌ Profile not found.",
+    "error_rate_limit_gpt": "⚠️ GPT request limit exceeded. Try again later.",
+    "error_rate_limit_perplexity": "⚠️ Perplexity request limit exceeded. Try again later.",
+    "error_rate_limit_deepseek": "⚠️ DeepSeek request limit exceeded. Try again later.",
+    "error_rate_limit_dalle": "⚠️ DALLE request limit exceeded. Try again later.",
+    "error_bad_request_dalle": "🥲 Your request does not comply with OpenAI's safety policy",
+    "error_generate_image": "⚠️ Failed to generate image",
+    "error_gpt_response": "❌ Failed to get a response from GPT",
+    "error_perplexity_response": "❌ Failed to get a response from Perplexity",
+    "error_deepseek_response": "❌ Failed to get a response from DeepSeek",
+    "error_dalle_response": "❌ Failed to get a response from DALLE",
+    "error_voice_format": "⚠️ Unsupported file format",
+    "error_voice_recognition": "⚠️ Failed to recognize speech in voice message.",
+    "error_voice_processing": "⚠️ Error processing voice",
+    "error_tts_generate": "⚠️ Failed to generate voice response.",
+    "error_tts_processing": "⚠️ Error generating voice message",
+    "error_command_not_supported": "⚠️ This command is not supported",
+    "error_model_unavailable": "❌ This model is temporarily unavailable.",
+    "error_role_unavailable": "❌ This role is temporarily unavailable.",
+    "error_limit_exceeded": "❌ Usage limit for exceeded",
+    "error_unknown": "Unknown error.",
+    "error_wrong_date_format": "❌ Invalid date format. Use YYYY-MM-DD",
+    "error_image_download": "Failed to download image. Response code",
+    "error_image_download_generic": "Image download error"
+  },
+  "voice": {
+    "tts_settings": "🎙️ Voice Message Settings\nHere you can configure how the bot interacts with voice messages.\n\n1. Voice Message Processing via AI\nYour voice message can be:\n<strong>❌ OFF</strong> - simply recognized and output as text\n<strong>✅ ON</strong> - recognized and responded to\n\n2. AI Voice Response\n<strong>❌ OFF</strong> - you get a text response\n<strong>✅ ON</strong> - response as a voice message\n\n👇Choose the settings below."
+  },
+  "admin": {
+    "admin_panel": "🔐 Admin Panel",
+    "admin_list_users": "👥 User List",
+    "admin_export_table": "📋 Generate Request Table",
+    "admin_grant_subs": "💳 Grant Subscription",
+    "admin_revoke_subs": "🚫 Revoke Subscription",
+    "admin_maintenance": "🔧 Maintenance Notification",
+    "maintenance_confirm": "⚠️ Are you sure you want to send a maintenance notification to all users?\n\nThis action cannot be undone.",
+    "maintenance_cancel": "Notification canceled",
+    "maintenance_done": "🔔 All users ({notified}) have been notified about maintenance. ⚠️ {not_notified} were not notified.",
+    "maintenance_sending": "⏳ Sending notifications..."
+  },
+  "stats": {
+    "stat_empty": "ℹ️ Statistics are empty for now. Time to start using the bot 😉",
+    "stat_title": "📊 Your statistics for the current month:\n\n"
+  },
+  "privacy": {
+    "privacy_policy": "🔒 Privacy Policy\n\n📄 <a href=\"https://telegra.ph/Polzovatelskoe-soglashenie-06-06-12\">User Agreement</a>\n\n📄 <a href=\"https://telegra.ph/Politika-konfidencialnosti-06-06-5\">Privacy Policy</a>"
+  },
+  "misc": {
+    "custom_role_in_development": "⚠️ Feature under development"
+  }
+}
