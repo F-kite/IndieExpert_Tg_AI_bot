@@ -27,19 +27,95 @@ async def handle_admin_list_users(bot: AsyncTeleBot, call: CallbackQuery):
     users = await get_all_users()
 
     if not users:
-        await bot.send_message(chat_id, "🫥 База данных пуста.")
+        msg = await bot.send_message(chat_id, "🫥 База данных пуста.")
+        await auto_delete_message(bot, chat_id, msg.message_id, delay=5)
         return
 
-    response = "👑 Администратор | 👤 Пользователь\n\n"
-
+    # Подготавливаем данные для Excel
+    data = []
     for user in users:
-        user_id = int(user["user_id"])
+        user_id_db = int(user["user_id"])
         username = user.get("username", "Не указан")
-        sub_status = "✅" if user.get("is_subscribed", False) else "❌"
-        role_label = "👑" if user_id in ADMINS else "👤"
-        response += f"{role_label} @{username} ID: <code>{user_id}</code> Подписка: {sub_status}\n"
+        first_name = user.get("first_name", "Не указан")
+        is_subscribed = "✅" if user.get("is_subscribed", False) else "❌"
+        role = "👑 Админ" if user_id_db in ADMINS else "👤 Пользователь"
+        registered_at = user.get("registered_at", "")
+        if hasattr(registered_at, 'strftime'):
+            registered_at = registered_at.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            registered_at = str(registered_at)
+            
+        data.append({
+            "ID пользователя": user_id_db,
+            "Username": f"@{username}" if username != "Не указан" else "Не указан",
+            "Имя": first_name,
+            "Роль": role,
+            "Подписка": is_subscribed,
+            "Дата регистрации": registered_at
+        })
 
-    await bot.send_message(chat_id, response, reply_markup=create_admin_keyboard(), parse_mode="HTML")
+    try:
+        # Создаем DataFrame
+        df = pd.DataFrame(data)
+        
+        # Создаём Excel в памяти
+        excel_file = BytesIO()
+        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
+            df.to_excel(writer, index=False, sheet_name='Пользователи')
+
+        # Редактируем после записи для форматирования
+        excel_file.seek(0)
+        wb = load_workbook(excel_file)
+        ws = wb.active
+
+        # Форматирование: автоширина, перенос текста, выравнивание
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+
+            for cell in col:
+                # Включаем перенос текста и выравнивание
+                if isinstance(cell.value, str) and len(str(cell.value)) > 20:
+                    cell.alignment = Alignment(wrap_text=True, vertical="top")
+                else:
+                    cell.alignment = Alignment(
+                        horizontal="center" if column in ["A", "D", "E"] else "left",
+                        vertical="top"
+                    )
+
+                # Вычисляем максимальную длину для ширины колонки
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+
+            # Устанавливаем ширину колонки
+            adjusted_width = min(max_length + 2, 30)
+            ws.column_dimensions[column].width = adjusted_width
+
+            # Ограничиваем высоту строк
+            for row in ws.iter_rows():
+                for cell in row:
+                    if isinstance(cell.value, str) and len(cell.value) > 50:
+                        ws.row_dimensions[cell.row].height = min(150, len(cell.value) // 4 * 15)
+
+        # Сохраняем изменения
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Отправляем файл
+        await bot.send_document(
+            chat_id=chat_id,
+            document=InputFile(output, "Пользователи.xlsx"),
+            caption="📎 Список всех пользователей"
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при экспорте списка пользователей: {e}")
+        msg = await bot.send_message(chat_id, "❌ Не удалось сформировать файл со списком пользователей")
+        await auto_delete_message(bot, chat_id, msg.message_id, delay=5)
 
 
 async def handle_admin_grant_subs(bot: AsyncTeleBot, call: CallbackQuery):
