@@ -50,6 +50,7 @@ async def ensure_user_exists(user):
     if user_id == BOT_ID:
         return
 
+    logger.info(f"👤 Проверка пользователя:\n ID:{user.id}\n FirstName:{user.first_name}\n LastName:{user.last_name}\n Username:{user.username}\n LangCode:{user.language_code}\n PremiumSub:{user.is_premium}")  
     now = datetime.now()
     user_data = await users_collection.find_one({"user_id": user_id})
 
@@ -72,6 +73,7 @@ async def ensure_user_exists(user):
         await users_collection.insert_one(new_user_data)
         return
 
+    logger.info(f"👤 UserName пользователя из бд: {user_data.get("username", "Не выявлено")}")
     is_subscribed = user_data.get("is_subscribed", False)
     
     # Обновление полей у пользователей в бд

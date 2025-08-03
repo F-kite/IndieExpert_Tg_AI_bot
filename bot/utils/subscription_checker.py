@@ -43,6 +43,15 @@ async def check_subscriptions_expiry(bot: AsyncTeleBot, user_id=0):
         if not subscription_end or subscription_end is None:
             continue
 
+        if isinstance(subscription_end, str):
+            try:
+                subscription_end = datetime.fromisoformat(subscription_end).date()
+            except ValueError:
+                logger.warning(f"⚠️ Неверный формат даты у пользователя {user_id}: {subscription_end}")
+                continue
+        elif isinstance(subscription_end, datetime):
+            subscription_end = subscription_end.date()
+
         if subscription_end.date() < now:
             continue
 
