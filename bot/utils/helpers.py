@@ -48,13 +48,6 @@ async def safe_edit_message(bot, chat_id, message_id, text, reply_markup=None, p
     return True
 
 
-async def safe_delete_message(bot, chat_id, message_id):
-    try:
-        await bot.delete_message(chat_id, message_id)
-    except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение {message_id}: {e}")
-
-
 def extract_russian_text(text):
     start_index = None
     for i, char in enumerate(text):

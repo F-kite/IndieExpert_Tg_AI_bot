@@ -2,7 +2,7 @@ from telebot import types
 from telebot.async_telebot import AsyncTeleBot
 import asyncio
 import atexit
-from openai import OpenAI
+from openai import AsyncOpenAI
 from bot_init import init_bot
 from config import *
 from database.client import *
@@ -20,9 +20,9 @@ def shutdown_logger():
     logger.info("⛔ Бот остановлен.")
 
 # Инициализация ИИ
-client_gpt = OpenAI(api_key=OPENAI_API_KEY)
-client_perplexity = OpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
-client_deepseek = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+client_gpt = AsyncOpenAI(api_key=OPENAI_API_KEY)
+client_perplexity = AsyncOpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
+client_deepseek = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 client_gemini = ""
 client_claude = ""
 client_midjourney = ""

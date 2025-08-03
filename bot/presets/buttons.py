@@ -1,21 +1,19 @@
-from telebot.types import InlineKeyboardButton
-
-BACK_BUTTON = InlineKeyboardButton("🏠 Главное меню", callback_data="back_to_main")
-
 SIDE_BUTTONS={
     "/start": "🏠 Главное меню",
     "/profile": "👤 Профиль",
     "/choose_ai": "🧠 Выбрать нейросеть",
     "/choose_role": "🎭 Выбрать роль бота",
+    "/speech_settings": "🎙️ Настройки голосовых сообщений",
     "/history": "📖 История запросов",
     "/privacy": "🔒 Политика конфиденциальности",
 }
 
 INLINE_BUTTONS = {
     "show_profile": "👤 Профиль",
-    "choose_ai": "🧠 Выбрать модель ИИ",
     "subscribe": "💳 Оформить подписку",
+    "choose_ai": "🧠 Модель ИИ",
     "choose_role": "🎭 Выбор роли",
+    "speech_settings":"🎙️ Настройки голосовых сообщений",
     "https://t.me/w_ViIl": "💬 Служба поддержки",
 }
 

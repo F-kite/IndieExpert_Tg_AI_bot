@@ -13,6 +13,24 @@ users_collection = db["users"]
 history_collection = db["history"]
 logger = get_logger(__name__)
 
+DEFAULT_USER_DATA = {
+    "is_subscribed": False,
+    "subscription_start": "",
+    "subscription_end": None,
+    "ai_model": "gpt-4o",
+    "role": "tarot_reader",
+    "custom_prompt": "",
+    "request_limits": {},
+    "monthly_usage": {},
+    "last_seen": None,
+    "registered_at": None,
+    "tts_settings": {
+        "process_voice_messages":False, #После транскрибации текст отправляется к ИИ
+        "reply_voice_messages":False #Транскрибация текста в речь и отправка голосового
+    }
+}
+
+
 async def test_mongo_connection():
     """Проверяет подключение к MongoDB."""
     try:
@@ -32,83 +50,109 @@ async def ensure_user_exists(user):
     if user_id == BOT_ID:
         return
 
+    logger.info(f"👤 Проверка пользователя:\n ID:{user.id}\n FirstName:{user.first_name}\n LastName:{user.last_name}\n Username:{user.username}\n LangCode:{user.language_code}\n PremiumSub:{user.is_premium}")  
     now = datetime.now()
-    user_doc = await users_collection.find_one({"user_id": user_id})
+    user_data = await users_collection.find_one({"user_id": user_id})
 
-    # Если пользователя нет — создаём нового
-    if not user_doc:
-        request_limits = {}
-        for key in AI_PRESETS.keys():
-            request_limits[key] = {"count": 0, "last_reset": now}
+    # Если пользователя нет — создаём его в бд
+    if not user_data:
+        request_limits = {key: {"count": 0} for key in AI_PRESETS.keys()}
+        monthly_usage = {key: 0 for key in AI_PRESETS.keys()}
 
-        user_data = {
+        new_user_data = DEFAULT_USER_DATA.copy()
+        new_user_data.update({
             "user_id": user_id,
             "first_name": user.first_name,
             "username": user.username,
             "registered_at": now,
             "last_seen": now,
-            "is_subscribed": False,
-            "subscription_start":"",
-            "subscription_end": None,
-            "ai_model": "gpt-4o",
-            "role": "default",
-            "custom_prompt":"",
-            "request_limits": request_limits
-        }
-        await users_collection.insert_one(user_data)
-    else:
-        is_subscribed = user_doc.get("is_subscribed", False)
-        # Выдача подписки админам
-        if (not is_subscribed and user_id in ADMINS) or (user_id in ADMINS):
-            await users_collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"is_subscribed": True, "subscription_end": None}}  # Без ограничения по времени
-            )
-        subscription_end = user_doc.get("subscription_end")
+            "request_limits": request_limits,
+            "monthly_usage": monthly_usage
+        })
+        
+        await users_collection.insert_one(new_user_data)
+        return
 
-	# Если это строка, преобразуем в datetime
-        if isinstance(subscription_end, str):
-            try:
-                subscription_end = datetime.fromisoformat(subscription_end)
-            except ValueError:
-                logger.warning(f"⚠️ Неверный формат даты у пользователя {user_id}: {subscription_end}")
-        # Отключение подписки если истек ее срок
-        if subscription_end is not None and (now.date() == subscription_end.date()):
-            await users_collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"is_subscribed": False}}
-            )
-            is_subscribed = False
+    logger.info(f"👤 UserName пользователя из бд: {user_data.get("username", "Не выявлено")}")
+    is_subscribed = user_data.get("is_subscribed", False)
+    
+    # Обновление полей у пользователей в бд
+    update_data = {}
+    
+    for field, default_value in DEFAULT_USER_DATA.items():
+        if field not in user_data:
+            update_data[field] = default_value
 
-        # Если нет подписки - все сбрасывается по умолчанию
-        if not is_subscribed:
-           await users_collection.update_one(
-            {"user_id": user_id},
-            {"$set": {"ai_model": "gpt-4o", "role":"default", "subscription_start":"", "subscription_end":""}}
-        )
-           
-        # Сбрасываем лимиты в начале нового месяца
-        if user_doc.get("last_month", None) != now.month:
-           await users_collection.update_one(
-               {"user_id": user_id},
-               {
-                   "$set": {
-                       "last_month": now.month,
-                       "monthly_usage": {model_key: 0 for model_key in AI_PRESETS.keys()}
-                   }
-               }
-           )
-           
-        # Обновляем дату последнего взаимодействия
+    if update_data:
         await users_collection.update_one(
             {"user_id": user_id},
-            {"$set": {"last_seen": now}}
+            {"$set": update_data}
         )
+
+    # Выдача подписки админам
+    if user_id in ADMINS:
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"is_subscribed": True, "subscription_end": None}}  # Без ограничения по времени
+        )
+
+    subscription_end = user_data.get("subscription_end", None)
+
+    if subscription_end == "":
+        subscription_end = None
+    elif isinstance(subscription_end, str):
+        try:
+            # Преобразуем строку в объект datetime
+            subscription_end = datetime.fromisoformat(subscription_end)
+        except ValueError:
+            logger.warning(f"[DEBUG] Некорректный формат даты у пользователя {user_id}")
+            logger.warning(f"[DEBUG] subscription_end: {subscription_end} | Тип: {type(subscription_end)}")
+            subscription_end = None
+
+    # Отключение подписки если истек ее срок
+    if (subscription_end is not None) and (now.date() == subscription_end.date()):
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"is_subscribed": False}}
+        )
+        is_subscribed = False
+
+    current_role = user_data.get("role")
+    if current_role not in  ["tarot_reader", "compatibility", "numerologist"]: current_role = "tarot_reader"
+    # Если нет подписки - все сбрасывается по умолчанию
+    if not is_subscribed:
+        await users_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"ai_model": "gpt-4o", "role":current_role, "subscription_start":"", "subscription_end":""}}
+    )
+        
+    # Сбрасываем лимиты в начале нового месяца
+    if user_data.get("last_month", None) != now.month:
+        model_limit = {"count":0}
+
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "last_month": now.month,
+                    "monthly_usage": {model_key: 0 for model_key in AI_PRESETS.keys()},
+                    "request_limits": {model_key: model_limit for model_key in AI_PRESETS.keys()}
+                    
+                }
+            }
+        )
+            
+    # Обновляем дату последнего взаимодействия
+    await users_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"last_seen": now}}
+    )
     
 
 async def get_all_users():
-    cursor = users_collection.find({"user_id": {"$nin": ADMINS}})
+    cursor = users_collection.find()
     return await cursor.to_list(length=None)
+
 
 async def get_user_history(user_id):
     cursor = history_collection.find({"user_id": user_id}, {"_id": 0})
@@ -163,13 +207,13 @@ async def get_user_info(user_id):
 
 async def get_current_prompt(user_id):
     user_data = await get_user_info(user_id)
-    role_key = user_data.get("role", "default")
+    role_key = user_data.get("role", "tarot_reader")
     custom_prompt = user_data.get("custom_prompt", "")
 
     if role_key == "custom" and custom_prompt:
         return custom_prompt
     else:
-        preset = ROLE_PRESETS.get(role_key, ROLE_PRESETS["default"])
+        preset = ROLE_PRESETS.get(role_key)
         return preset["prompt"]
     
 # Выдача подписки админом
